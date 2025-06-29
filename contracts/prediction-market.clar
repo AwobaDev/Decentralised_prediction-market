@@ -103,7 +103,8 @@
     (begin
         (asserts! (is-owner) err-owner-only)
         (map-set oracles oracle { reputation: u100, is-active: true })
-        (var-set oracle-list (unwrap! (as-max-len? (append (var-get oracle-list) oracle) u100) err-invalid-params))
+        (let ((current-list (var-get oracle-list)))
+            (var-set oracle-list (unwrap! (as-max-len? (append current-list oracle) u100) err-invalid-params)))
         (ok true)))
 
 ;; Update oracle reputation (owner only)
@@ -128,11 +129,13 @@
 (define-public (set-min-dispute-stake (amount uint))
     (begin
         (asserts! (is-owner) err-owner-only)
+        (asserts! (> amount u0) err-invalid-params)
         (var-set min-dispute-stake amount)
         (ok true)))
 
 (define-public (set-default-dispute-period-length (blocks uint))
     (begin
         (asserts! (is-owner) err-owner-only)
+        (asserts! (> blocks u0) err-invalid-params)
         (var-set default-dispute-period-length blocks)
         (ok true)))
