@@ -90,9 +90,14 @@
         
         ;; Add initial oracles
         (map add-oracle-internal initial-oracles)
-        (var-set oracle-list initial-oracles)
+        (let ((oracle-list-result (fold append-oracle-to-list initial-oracles (list))))
+            (var-set oracle-list oracle-list-result))
         (var-set contract-initialized true)
         (ok true)))
+
+;; Helper function for folding oracles into list
+(define-private (append-oracle-to-list (oracle principal) (acc (list 100 principal)))
+    (unwrap-panic (as-max-len? (append acc oracle) u100)))
 
 ;; Internal function to add oracle
 (define-private (add-oracle-internal (oracle principal))
@@ -104,8 +109,11 @@
         (asserts! (is-owner) err-owner-only)
         (map-set oracles oracle { reputation: u100, is-active: true })
         (let ((current-list (var-get oracle-list)))
-            (var-set oracle-list (unwrap! (as-max-len? (append current-list oracle) u100) err-invalid-params)))
-        (ok true)))
+            (match (as-max-len? (append current-list oracle) u100)
+                new-list (begin
+                    (var-set oracle-list new-list)
+                    (ok true))
+                err-invalid-params))))
 
 ;; Update oracle reputation (owner only)
 (define-public (update-oracle-reputation (oracle principal) (reputation uint))
@@ -114,7 +122,7 @@
         (asserts! (<= reputation u100) err-invalid-params)
         (match (map-get? oracles oracle)
             oracle-data (begin
-                (map-set oracles oracle (merge oracle-data { reputation: reputation }))
+                (map-set oracles oracle { reputation: reputation, is-active: (get is-active oracle-data) })
                 (ok true))
             err-not-found)))
 
